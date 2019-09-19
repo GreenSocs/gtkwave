@@ -85,6 +85,8 @@
 
 char *gtkwave_argv0_cached = NULL;
 
+static void create_tcl_control_socket(int port);
+
 static void switch_page(GtkNotebook     *notebook,
 			GtkNotebookPage *page,
 			guint            page_num,
@@ -344,6 +346,7 @@ WAVE_GETOPT_CPUS
 "  -N, --nowm                 disable window manager for most windows\n"
 "  -M, --nomenus              do not render menubar (for making applets)\n"
 "  -S, --script=FILE          specify Tcl command script file for execution\n"
+"  -p, --tcl_port=PORT        specify tcp port to listen to for Tcl command\n"
 REPSCRIPT_GETOPT
 XID_GETOPT
 RPC_GETOPT
@@ -461,6 +464,7 @@ static char *winstd="GTKWave (stdio) ";
 static char *vcd_autosave_name="vcd_autosave.sav";
 char *output_name = NULL;
 char *chdir_cache = NULL;
+char *tcl_port_opt = NULL;
 
 int magic_word_filetype = G_FT_UNKNOWN;
 
@@ -834,10 +838,11 @@ while (1)
                 {"rcvar", 1, 0, '4'},
 		{"sstexclude", 1, 0, '5'},
 		{"saveonexit", 0, 0, '7'},
+		{"tcl_port", 1, 0, 'p'},
                 {0, 0, 0, 0}
                 };
 
-        c = getopt_long (argc, argv, "zf:Fon:a:Ar:dl:s:e:c:t:NS:vVhxX:MD:IgCLR:P:O:WT:1:2:34:5:7", long_options,
+        c = getopt_long (argc, argv, "zf:Fon:a:Ar:dl:s:e:c:t:NS:vVhxX:MD:IgCLR:P:O:WT:1:2:34:5:7p:", long_options,
 &option_index);
 
         if (c == -1) break;     /* no more args */
@@ -1192,6 +1197,12 @@ while (1)
 		case 'z':
 			GLOBALS->enable_slider_zoom = 1;
 			break;
+
+                case 'p':
+                        if(tcl_port_opt) free_2(tcl_port_opt);
+                        tcl_port_opt = malloc_2(strlen(optarg)+1);
+                        strcpy(tcl_port_opt, optarg);
+                        break;
 
                 case '?':
 			opt_errors_encountered=1;
@@ -2745,6 +2756,18 @@ if(GLOBALS->dual_attach_id_main_c_1)
 	}
 else
 #endif
+{
+if (tcl_port_opt)
+        {
+        int port = atoi(tcl_port_opt);
+        if (port <= 0 || port > 65535)
+                {
+                fprintf(stderr, "Bad port `%s'\n", tcl_port_opt);
+                exit(255);
+                }
+        create_tcl_control_socket(port);
+        }
+
 if(is_interactive)
 	{
 	for(;;) { kick_partial_vcd(); }
@@ -2770,6 +2793,7 @@ if(is_interactive)
 	  gtk_main();
 #endif
 	}
+}
 
 #ifdef MAC_INTEGRATION
 exit(0); /* gtk_target_list_find crashes in OSX/Quartz is return instead of exit */
@@ -3199,3 +3223,67 @@ void optimize_vcd_file(void) {
   }
 }
 #endif
+
+static gboolean network_read(GIOChannel *source,
+             GIOCondition cond,
+             gpointer data)
+{
+GSocketConnection *connection = data;
+GString *s = g_string_new(NULL);
+size_t l;
+GError *error = NULL;
+GIOStatus ret = g_io_channel_read_line_string(source, s, NULL, &error);
+gboolean res = FALSE;
+
+switch (ret)
+        {
+        case G_IO_STATUS_NORMAL:
+                l = strlen(s->str);
+                while (l && (s->str[l-1] == '\n' || s->str[l-1] == '\r'))
+                        {
+                        s->str[--l] = '\0';
+                        }
+                fprintf(stderr, "GTKWAVE | Received command '%s' from connection %x\n", s->str, connection);
+                execute_command(s->str);
+                res = TRUE;
+                break;
+
+        case G_IO_STATUS_EOF:
+                fprintf(stderr, "GTKWAVE | Connection %x terminated\n", connection);
+                break;
+
+        case G_IO_STATUS_ERROR:
+                fprintf(stderr, "GTKWAVE | Connection %x error: %s\n", connection, error->message);
+                g_object_unref(connection);
+                break;
+        }
+
+
+return res;
+}
+
+static gboolean tcl_control_incoming(
+                GSocketService *service,
+                GSocketConnection *connection,
+                GObject           *source_object,
+                gpointer           user_data)
+{
+fprintf(stderr, "GTKWAVE | Received new control connection %x\n", connection);
+
+g_object_ref(connection);
+GSocket *socket = g_socket_connection_get_socket(connection);
+
+gint fd = g_socket_get_fd(socket);
+GIOChannel *channel = g_io_channel_unix_new(fd);
+// Pass connection as user_data to the watch callback
+g_io_add_watch(channel, G_IO_IN, (GIOFunc) network_read, connection);
+
+return TRUE;
+}
+
+static void create_tcl_control_socket(int port)
+{
+GSocketService *svc = g_socket_service_new();
+g_socket_listener_add_inet_port(G_SOCKET_LISTENER(svc), port, NULL, NULL);
+g_signal_connect(svc, "incoming", G_CALLBACK(tcl_control_incoming), NULL);
+}

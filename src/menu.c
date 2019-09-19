@@ -8516,14 +8516,15 @@ return(TRUE); /* keeps "delete_event" from happening...we'll manually destory la
 /*
  * RPC
  */
-int execute_script(char *name, int dealloc_name)
+static int execute_script_or_command(char *name, int dealloc_name, int is_script)
 {
 unsigned int i;
+const char *cmd_or_scr = is_script ? "script" : "command";
 int nlen = strlen(name);
 
 if(GLOBALS->tcl_running)
 	{
-	fprintf(stderr, "Could not run script file '%s', as one is already running.\n", name);
+	fprintf(stderr, "Could not run %s '%s', as one is already running.\n", cmd_or_scr, name);
 
 	if(dealloc_name)
 		{
@@ -8540,11 +8541,18 @@ if(1) /* all scripts are Tcl now */
 #if defined(HAVE_LIBTCL)
 	int tclrc;
         char *tcl_cmd = wave_alloca(8 + nlen + 1 + 1); /* originally a malloc, but the script can change the context! */
-        strcpy(tcl_cmd, "source {");
-        strcpy(tcl_cmd+8, name);
-        strcpy(tcl_cmd+8+nlen, "}");
+        if (is_script)
+                {
+                strcpy(tcl_cmd, "source {");
+                strcpy(tcl_cmd+8, name);
+                strcpy(tcl_cmd+8+nlen, "}");
+                }
+                else
+                {
+                strcpy(tcl_cmd, name);
+                }
 
-	fprintf(stderr, "GTKWAVE | Executing Tcl script '%s'\n", name);
+	fprintf(stderr, "GTKWAVE | Executing Tcl %s '%s'\n", cmd_or_scr, name);
 
 	if(dealloc_name)
 		{
@@ -8579,6 +8587,15 @@ GLOBALS->tcl_running = 0;
 return(0);
 }
 
+int execute_script(char *name, int dealloc_name)
+{
+return execute_script_or_command(name, dealloc_name, 1);
+}
+
+int execute_command(char *cmd)
+{
+return execute_script_or_command(cmd, 0, 0);
+}
 
 gtkwave_mlist_t *retrieve_menu_items_array(int *num_items)
 {
