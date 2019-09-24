@@ -99,6 +99,10 @@ gtkwave::setWindowStartTime { "sig3[31:0]" }
 gtkwave::setWindowStartTime { sig4\[31:0\] }
 ```
 
+## GDB integration
+
+GDB integration of the gtkwave control is in [gdb subdirectory](gdb).
+
 ## Licensing
 
 This software is distributed under the terms of the GNU General Public License
