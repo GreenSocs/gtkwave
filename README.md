@@ -71,6 +71,20 @@ gtkwave::setWindowStartTime 3.5ps
 gtkwave::setWindowStartTime "12.3e2 us"
 ```
 
+### gtkwave::/Time/Zoom/Zoom_To_Start
+
+This set the current view to the begining of the trace.
+
+### gtkwave::/Time/Zoom/Zoom_To_End
+
+This set the current view to the end of the trace.
+
+### gtkwave::/View/Partial_VCD_Dynamic_Zoom_To_End
+
+This command toggles the dynamic signal display. When it is on, the view
+follows the trace being generated. When it is off, the current displayed
+is static and be changed (for example by `gtkwave::setWindowStartTime`).
+
 ### gtkwave::addSignalsFromList
 
 This command takes a list of signals name as an argument.
