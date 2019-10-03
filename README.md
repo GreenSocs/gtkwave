@@ -24,8 +24,9 @@ including:
 ```
 mkdir build
 cd build
-../configure
+../configure --enable-tcl --disable-mime-update --prefix=/absolute/path/to/install/dir
 make
+make install
 ```
 
 gtkwave executable is then build in build/src directory.
