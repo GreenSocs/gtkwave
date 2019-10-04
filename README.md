@@ -17,9 +17,11 @@ See the TCL commands section below for additional details on supported commands.
 
 ## Building
 
-To build gtkwave with this option, several dependencies are required,
-including:
-- tcl library development files
+To build gtkwave with this option, several dependencies are required.
+
+For ubuntu:
+```
+apt-get install build-essential tcl-dev tk-dev liblzma-dev gperf
 
 ```
 mkdir build
