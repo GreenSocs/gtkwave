@@ -24,6 +24,7 @@ For ubuntu:
 apt-get install build-essential tcl-dev tk-dev liblzma-dev gperf
 ```
 
+To build, go in the directory where you cloned the repository, then do:
 ```
 mkdir build
 cd build
