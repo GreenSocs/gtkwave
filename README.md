@@ -22,6 +22,7 @@ To build gtkwave with this option, several dependencies are required.
 For ubuntu:
 ```
 apt-get install build-essential tcl-dev tk-dev liblzma-dev gperf
+```
 
 ```
 mkdir build
