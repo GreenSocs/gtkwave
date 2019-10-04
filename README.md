@@ -31,7 +31,11 @@ make
 make install
 ```
 
-gtkwave executable is then build in build/src directory.
+To be able to use this gtkwave without specifying the full path, you should add
+the `bin` install directory to your path:
+```
+export PATH=/absolute/path/to/install/dir/bin:$PATH
+```
 
 ## Testing
 
